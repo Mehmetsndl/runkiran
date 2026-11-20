@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rünkıran Prototipi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- 3D'den ekrana yansıtılan katmanlar -->
+  <div id="labels"></div>
+  <div id="floating"></div>
+  <div id="vignette"></div>
+  <div id="flash"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="xpbar"><div id="xpfill"></div><span id="leveltext">Seviye 1</span></div>
+    <div id="topleft">
+      <div id="charTag"></div>
+      <div class="hp"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
+      <div id="buildIcons"></div>
+    </div>
+    <div id="topright">
+      <div id="timer">00:00</div>
+      <div id="kills">💀 0</div>
+      <button id="muteBtn" title="Sesi aç/kapat">🔊</button>
+    </div>
+    <div id="modeInfo" hidden></div>
+    <div id="banner"><div class="b-title"></div><div class="b-sub"></div></div>
+    <div id="typingPanel">
+      <div id="combo"><span id="comboNum">0</span><small>KOMBO</small><em id="comboBonus"></em></div>
+      <div id="typingWord" class="idle">Bir kelimenin ilk harfine bas</div>
+      <div id="ult" hidden><span class="ult-ring"><span id="ultIcon"></span></span><span class="ult-meta"><b id="ultName"></b><small id="ultText"></small></span></div>
+    </div>
+    <div id="bottomleft">
+      <div id="modeText"></div>
+      <div class="hint" id="hintText">Space: ulti · Sağ tık: hareket modu · Backspace: hedefi bırak · Esc: duraklat</div>
+    </div>
+  </div>
+
+  <!-- Başlangıç menüsü -->
+  <div id="menu" class="overlay visible">
+    <div class="menu-grid">
+      <div class="panel menu-main">
+        <h1>RÜNKIRAN</h1>
+        <p class="tagline">Kılıcın klavyen, büyün kelimelerin.</p>
+        <h3 class="menu-h">Oyun Modu</h3>
+        <div id="modeCards" class="mode-cards"></div>
+        <div class="menu-row">
+          <label class="nick" for="nickInput">Kahraman adın
+            <input id="nickInput" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Lider tablosunda görünecek ad" />
+          </label>
+          <button id="startBtn" class="btn"><span class="btn-mode"></span><span class="btn-label">KAHRAMANINI SEÇ</span> <small>(Enter)</small></button>
+        </div>
+        <button id="cardsBtn" type="button" class="btn ghost cards-btn">🃏 KART ARŞİVİ <small id="cardsCount"></small></button>
+        <details class="howto-box">
+          <summary>Nasıl oynanır?</summary>
+          <ul class="howto">
+            <li><b>🖱️ Hareket:</b> Karakter imlecini takip eder. <em>Sağ tık</em> ile “Tıkla ve Git” moduna geç.</li>
+            <li><b>⌨️ Hedefleme:</b> Yaratığın üstündeki kelimenin <em>ilk harfine</em> bas, hedef kilitlenir.</li>
+            <li><b>⚡ Saldırı:</b> Kelimeyi hatasız bitir, kahramanın saldırsın. Hızlı yaz = daha çok <em>KRİTİK</em>.</li>
+            <li><b>🌟 Ulti:</b> Her kahramanın ultisi kendi süresinde dolar; dolunca <em>Space</em> ile kullan.</li>
+            <li><b>💎 Gelişim:</b> Kristalleri topla, seviye atla, 3 yetenek kartından birini seç.</li>
+            <li><b>🏰 Kale:</b> Yaratık kestikçe altın kazan; okçu, muhafız, mancınık al, surları yükselt (1–7).</li>
+            <li><b>⌨️ Menü:</b> 1–4 ile mod seç, Enter ile devam et.</li>
+          </ul>
+          <p class="note">Türkçe klavye önerilir (ç, ğ, ı, ö, ş, ü). Gerekirse <code>js/config.js</code> içinden kapatılabilir.</p>
+        </details>
+      </div>
+      <div class="panel lb-panel"><div id="lbMenu"></div></div>
+    </div>
+  </div>
+
+  <!-- Kartlar sayfası -->
+  <div id="cardsPage" class="overlay"></div>
+
+  <!-- Hükümdar Masası -->
+  <div id="tableRoot" hidden></div>
+  <div id="fetihLobby" class="overlay"></div>
+
+  <!-- Deniz Savaşı -->
+  <div id="navalRoot" hidden></div>
+  <div id="navalLobby" class="overlay"></div>
+
+  <!-- Karakter seçimi -->
+  <div id="charselect" class="overlay">
+    <h2>KAHRAMANINI SEÇ</h2>
+    <p class="sub">Tıkla veya 1–5 · Enter ile başla · Esc ile geri dön</p>
+    <div class="char-cards"></div>
+    <div class="char-actions">
+      <button id="charBackBtn" type="button" class="btn ghost">GERİ</button>
+      <button id="charGoBtn" type="button" class="btn">BAŞLA</button>
+    </div>
+  </div>
+
+  <!-- Seviye atlama -->
+  <div id="levelup" class="overlay">
+    <h2>SEVİYE ATLADIN!</h2>
+    <p class="sub">Bir yetenek seç — tıkla veya 1 / 2 / 3</p>
+    <div class="cards"></div>
+  </div>
+
+  <!-- Duraklatma -->
+  <div id="pause" class="overlay">
+    <div class="panel small">
+      <h2>DURAKLATILDI</h2>
+      <div class="pause-btns">
+        <button id="resumeBtn" class="btn">DEVAM ET <small>(Esc)</small></button>
+        <button id="pauseRestartBtn" class="btn ghost">YENİDEN BAŞLA <small>(R)</small></button>
+        <button id="pauseMenuBtn" class="btn ghost">ANA MENÜ <small>(M)</small></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Oyun sonu -->
+  <div id="gameover" class="overlay">
+    <div class="menu-grid">
+      <div class="panel">
+        <p id="goMode" class="go-mode"></p>
+        <h2 id="goTitle" class="dead">DÜŞTÜN, RÜNKIRAN</h2>
+        <p id="goSub" class="go-sub"></p>
+        <div id="goStats"></div>
+        <p id="saveStatus" class="save-status"></p>
+        <div class="go-btns">
+          <button id="restartBtn" class="btn">TEKRAR DENE <small>(Enter)</small></button>
+          <button id="overMenuBtn" class="btn ghost">ANA MENÜ <small>(M)</small></button>
+        </div>
+      </div>
+      <div class="panel lb-panel"><div id="lbOver"></div></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
